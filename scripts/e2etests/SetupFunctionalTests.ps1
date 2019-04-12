@@ -2,7 +2,7 @@ param (
     [ValidateSet("16.0")]
     [string]$VSVersion = "16.0")
 
- . "$PSScriptRoot\Utils.ps1"
+. "$PSScriptRoot\Utils.ps1"
 
 function EnableWindowsDeveloperMode()
 {
@@ -42,6 +42,27 @@ function DisableTextTemplateSecurityWarning([string]$VSVersion)
     Write-Host -ForegroundColor Cyan $Message
 }
 
+Function DisableStrongNameVerification(
+    [Parameter(Mandatory = $False)] [string] $assemblyName = '*',
+    [Parameter(Mandatory = $True)]  [string] $publicKeyToken)
+{
+    $regKey = "HKLM:SOFTWARE\Microsoft\StrongName\Verification\$assemblyName,$publicKeyToken"
+    $regKey32 = "HKLM:SOFTWARE\Wow6432Node\Microsoft\StrongName\Verification\$assemblyName,$publicKeyToken"
+    $has32BitNode = Test-Path "HKLM:SOFTWARE\Wow6432Node"
+
+    If (-Not (Test-Path $regKey) -Or ($has32BitNode -And -Not (Test-Path $regKey32)))
+    {
+        Write-Host "Disabling .NET strong name verification for public key token $publicKeyToken so that test-signed binaries can be used on the build machine."
+
+        New-Item -Path (Split-Path $regKey) -Name (Split-Path -Leaf $regKey) -Force | Out-Null
+
+        If ($has32BitNode)
+        {
+            New-Item -Path (Split-Path $regKey32) -Name (Split-Path -Leaf $regKey32) -Force | Out-Null
+        }
+    }
+}
+
 trap
 {
     Write-Host $_.Exception -ForegroundColor Red
@@ -69,6 +90,8 @@ Write-Host
 Write-Host 'Trying to set some registry keys to avoid dialog boxes popping during the functional test run...'
 
 DisableTextTemplateSecurityWarning $VSVersion
+
+DisableStrongNameVerification -assemblyName 'GenerateTestPackages' -publicKeyToken 'af2d2ab0170a966c' # <RepoRoot>\test\TestExtensions\GenerateTestPackages\ToolTestKey.snk
 
 $net35x86 = "C:\windows\Microsoft.NET\Framework\v3.5\msbuild.exe"
 $net35x64 = "C:\windows\Microsoft.NET\Framework64\v3.5\msbuild.exe"
