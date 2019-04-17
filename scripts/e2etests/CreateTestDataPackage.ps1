@@ -116,8 +116,6 @@ Function Create-TestPackages()
 Function Create-TestDataPackage()
 {
     $nuspecFile = Get-File($repositoryRootDirectoryPath, 'test', 'EndToEnd', 'NuGet.Client.EndToEnd.TestData.nuspec')
-    $outputDirectoryPath = [System.IO.Path]::Combine($repositoryRootDirectoryPath, 'artifacts', 'nupkgs')
-    $nupkgFilePath = [System.IO.Path]::Combine($outputDirectoryPath, 'NuGet.Client.EndToEnd.TestData.nupkg')
     $nugetFile = Get-NuGetFile
 
     $process = Start-Process `
@@ -130,7 +128,7 @@ Function Create-TestDataPackage()
 
     If ($process.ExitCode -eq 0)
     {
-        Write-Host "Created test data package $nupkgFilePath."
+        Write-Host "Created test data package in $outputDirectoryPath."
     }
     else
     {
