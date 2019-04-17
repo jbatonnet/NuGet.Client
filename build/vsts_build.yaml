@@ -216,7 +216,7 @@ phases:
     displayName: "Create EndToEnd Test Data Package"
     inputs:
       scriptName: "$(Build.Repository.LocalPath)\\scripts\\e2etests\\CreateTestDataPackage.ps1"
-      arguments: "-configuration $(BuildConfiguration) -toolsetVersion 15 -outputDirectoryPath $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)"
+      arguments: "-configuration $(BuildConfiguration) -toolsetVersion 15 -outputDirectoryPath $(Build.Repository.LocalPath)\\artifacts\\TestNupkgs"
       failOnStandardError: "true"
     condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
@@ -225,9 +225,9 @@ phases:
     inputs:
       scriptType: "inlineScript"
       inlineScript: |
-        Copy-Item $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)\\NuGet.Client.EndToEnd.TestData.1.0.0.nupkg $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)\\NuGet.Client.EndToEnd.TestData.1.0.0.zip
-        Expand-Archive -Path $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)\\NuGet.Client.EndToEnd.TestData.1.0.0.zip -DestinationPath $(Build.Repository.LocalPath)\\packages\\NuGet.Client.EndToEnd.TestData.1.0.0
-        Remove-Item -Path $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)\\NuGet.Client.EndToEnd.TestData.1.0.0.zip -Force -ErrorAction Ignore
+        Copy-Item $(Build.Repository.LocalPath)\\artifacts\\TestNupkgs\\NuGet.Client.EndToEnd.TestData.1.0.0.nupkg $(Build.Repository.LocalPath)\\artifacts\\TestNupkgs\\NuGet.Client.EndToEnd.TestData.1.0.0.zip
+        Expand-Archive -Path $(Build.Repository.LocalPath)\\artifacts\\TestNupkgs\\NuGet.Client.EndToEnd.TestData.1.0.0.zip -DestinationPath $(Build.Repository.LocalPath)\\packages\\NuGet.Client.EndToEnd.TestData.1.0.0
+        Remove-Item -Path $(Build.Repository.LocalPath)\\artifacts\\TestNupkgs\\NuGet.Client.EndToEnd.TestData.1.0.0.zip -Force -ErrorAction Ignore
     condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
   - task: MSBuild@1
