@@ -220,6 +220,13 @@ phases:
       failOnStandardError: "true"
     condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
+  - task: CopyFiles@2
+    displayName: "Copy EndToEnd Test Data Package"
+    inputs:
+      SourceFolder: "artifacts\\TestNupkgs"
+      Contents: "*.nupkg"
+      TargetFolder: "$(BuildOutputTargetPath)\\TestArtifacts"
+
   - task: PowerShell@1
     displayName: "Expand EndToEnd Test Data Package"
     inputs:
@@ -628,7 +635,7 @@ phases:
       scriptType: "inlineScript"
       inlineScript: |
         Write-Host "##vso[build.updatebuildnumber]$env:FullVstsBuildNumber"
-        gci env:* | sort-object name      
+        gci env:* | sort-object name
 
   - task: DownloadBuildArtifacts@0
     displayName: "Download Build artifacts"
