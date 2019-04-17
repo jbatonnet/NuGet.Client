@@ -269,6 +269,13 @@ phases:
       Contents: "*.nupkg"
       TargetFolder: "$(BuildOutputTargetPath)\\artifacts\\$(VsixPublishDir)\\$(NupkgOutputDir)"
 
+  - task: CopyFiles@2
+    displayName: "Copy Nupkgs"
+    inputs:
+      SourceFolder: "artifacts\\$(NupkgOutputDir)\\Test"
+      Contents: "*.nupkg"
+      TargetFolder: "$(BuildOutputTargetPath)\\artifacts\\$(VsixPublishDir)\\$(NupkgOutputDir)\\Test"
+
   - task: MSBuild@1
     displayName: "Generate VSMAN file for NuGet Core VSIX"
     inputs:
