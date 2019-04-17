@@ -80,14 +80,6 @@ Function Create-TestPackages()
         Get-ChildItem $testDirectoryPath\* -Include *.dgml,*.nuspec | %{
             Write-Host "Running $($generateTestPackagesFile.Name) on $($_.FullName)...  " -NoNewLine
 
-            $process = Start-Process `
-                -FilePath $generateTestPackagesFile.FullName `
-                -WorkingDirectory $testDirectoryPath `
-                -WindowStyle Hidden `
-                -PassThru `
-                -Wait `
-                -ArgumentList $_.FullName
-
             $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
             $startInfo.FileName = $generateTestPackagesFile.FullName
             $startInfo.WorkingDirectory = $testDirectoryPath
@@ -116,10 +108,7 @@ Function Create-TestPackages()
             }
         }
 
-        If ($assembliesDirectory.Exists)
-        {
-            $assembliesDirectory.Delete($recursive)
-        }
+        Remove-Item -Path $assembliesDirectory.FullName -Recurse -Force -ErrorAction Ignore
     }
 }
 
