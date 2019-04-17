@@ -28,7 +28,7 @@ if ((Test-Path $nugetExePath) -eq $False)
 # Enable NuGet Test Mode
 $env:NuGetTestModeEnabled = "True"
 
-$testExtensionNames = @( 'GenerateTestPackages.exe', 'API.Test.dll' )
+$testExtensionNames = @( 'API.Test.dll' )
 $testExtensionsRoot = Join-Path $nugetRoot 'artifacts\TestExtensions'
 
 $testExtensions = @()
@@ -44,10 +44,6 @@ else
 }
 
 $testExtensions = [System.Collections.ArrayList]::new($testExtensions)
-
-# Remove GenerateTestPackages alone from the list of test extensions
-$generatePackagesExePath = $testExtensions[0]
-$testExtensions.RemoveAt(0)
 
 $testExtensions | %{
     if (!(Test-Path $_))
@@ -322,62 +318,6 @@ function Run-Test {
                     NuGetExe = $nugetExePath
                 }
 
-                $generatePackagesExitCode = 0
-                $generatePackagesExecutionTime = $Null
-
-                if (Test-Path $repositoryPath) {
-                    pushd
-                    Set-Location $repositoryPath
-                    # Generate any packages that might be in the repository dir
-                    Get-ChildItem $repositoryPath\* -Include *.dgml,*.nuspec | %{
-                        $stdoutFilePath = [System.IO.Path]::Combine($repositoryPath, "stdout.txt")
-                        $stderrFilePath = [System.IO.Path]::Combine($repositoryPath, "stderr.txt")
-
-                        Remove-Item -Path $stdoutFilePath -Force -ErrorAction Ignore
-                        Remove-Item -Path $stderrFilePath -Force -ErrorAction Ignore
-
-                        Write-Host 'Running GenerateTestPackages.exe on ' $_.FullName '...'
-
-                        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-
-                        $p = Start-Process $generatePackagesExePath -Wait -WindowStyle Hidden -PassThru -ArgumentList $_.FullName -RedirectStandardOutput $stdoutFilePath -RedirectStandardError $stderrFilePath
-
-                        $generatePackagesExecutionTime = $stopwatch.Elapsed
-
-                        If (Test-Path $stdoutFilePath)
-                        {
-                            $stdout = [System.IO.File]::ReadAllText($stdoutFilePath)
-
-                            If ($stdout)
-                            {
-                                Write-Host "Standard output:  $stdout"
-                            }
-                        }
-
-                        If (Test-Path $stderrFilePath)
-                        {
-                            $stderr = [System.IO.File]::ReadAllText($stderrFilePath)
-
-                            If ($stderr)
-                            {
-                                Write-Host "Standard error:  $stderr"
-                            }
-                        }
-
-                        $generatePackagesExitCode = $p.ExitCode
-
-                        if ($generatePackagesExitCode -ne 0)
-                        {
-                            Write-Host -ForegroundColor Red 'GenerateTestPackages.exe failed. Exit code is ' + $generatePackagesExitCode
-                        }
-                        else
-                        {
-                            Write-Host 'GenerateTestPackages.exe on ' $_.FullName ' succeeded'
-                        }
-                    }
-                    popd
-                }
-
                 $context = New-Object PSObject -Property $values
 
                 # Some tests are flaky. We give failed tests another chance to succeed.
@@ -391,11 +331,6 @@ function Run-Test {
                     }
 
                     try {
-                        if($generatePackagesExitCode -ne 0)
-                        {
-                            throw 'GenerateTestPackages.exe failed. Exit code is ' + $generatePackagesExitCode
-                        }
-
                         DebugLog $debugLogFilePath "Starting $testName"
 
                         $testExecutionTime = measure-command { & $testObject $context $testCaseObject }
@@ -453,27 +388,12 @@ function Run-Test {
                             DebugLog $debugLogFilePath "Closing solution"
                             [API.Test.VSSolutionHelper]::CloseSolution()
                         }
-
-                        if ($testSucceeded -or $counter -eq 1) {
-                            if (Test-Path $repositoryPath) {
-                                # Cleanup the output from running the generate packages tool
-                                Remove-Item (Join-Path $repositoryPath Packages) -Force -Recurse -ErrorAction SilentlyContinue
-                                Remove-Item (Join-Path $repositoryPath Assemblies) -Force -Recurse -ErrorAction SilentlyContinue
-                            }
-                        }
                     }
 
                     [int] $timeInMilliseconds = [System.Math]::Round($testExecutionTime.TotalMilliseconds)
 
                     $results[$name]["TimeInMilliseconds"] = $timeInMilliseconds
                     $results[$name]["Retried"] = $counter -gt 0
-
-                    If ($generatePackagesExecutionTime)
-                    {
-                        $timeInMilliseconds = [System.Math]::Round($generatePackagesExecutionTime.TotalMilliseconds)
-
-                        $results[$name]["GenerateTestPackagesTimeInMilliseconds"] = $timeInMilliseconds
-                    }
 
                     if ($testSucceeded) {
                         break;
