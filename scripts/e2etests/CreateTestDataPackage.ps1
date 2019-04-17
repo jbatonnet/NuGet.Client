@@ -73,17 +73,9 @@ Function Create-TestPackages()
         $testDirectoryPath = $_
         $packagesDirectory = Get-Directory($testDirectoryPath, 'Packages')
         $assembliesDirectory = Get-Directory($testDirectoryPath, 'Assemblies')
-        $recursive = $True
 
-        If ($packagesDirectory.Exists)
-        {
-            $packagesDirectory.Delete($recursive)
-        }
-
-        If ($assembliesDirectory.Exists)
-        {
-            $assembliesDirectory.Delete($recursive)
-        }
+        Remove-Item -Path $packagesDirectory.FullName -Recurse -Force -ErrorAction Ignore
+        Remove-Item -Path $assembliesDirectory.FullName -Recurse -Force -ErrorAction Ignore
 
         Get-ChildItem $testDirectoryPath\* -Include *.dgml,*.nuspec | %{
             Write-Host "Running $($generateTestPackagesFile.Name) on $($_.FullName)...  " -NoNewLine
@@ -96,6 +88,22 @@ Function Create-TestPackages()
                 -Wait `
                 -ArgumentList $_.FullName
 
+            $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+            $startInfo.FileName = $generateTestPackagesFile.FullName
+            $startInfo.WorkingDirectory = $testDirectoryPath
+            $startInfo.UseShellExecute = $False
+            $startInfo.RedirectStandardError = $True
+            $startInfo.RedirectStandardOutput = $True
+            $startInfo.Arguments = $_.FullName
+
+            $process = [System.Diagnostics.Process]::new()
+            $process.StartInfo = $startInfo
+            $process.Start() | Out-Null
+            $process.WaitForExit()
+
+            $stdout = $process.StandardOutput.ReadToEnd()
+            $stderr = $process.StandardError.ReadToEnd()
+
             If ($process.ExitCode -eq 0)
             {
                 Write-Host 'Success.'
@@ -103,6 +111,8 @@ Function Create-TestPackages()
             else
             {
                 Write-Error "Failed.  Exit code is $($process.ExitCode)."
+                Write-Host "Output stream: $stdout"
+                Write-Host "Error stream: $stderr"
             }
         }
 
