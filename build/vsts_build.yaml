@@ -226,6 +226,7 @@ phases:
       SourceFolder: "artifacts\\TestNupkgs"
       Contents: "*.nupkg"
       TargetFolder: "$(BuildOutputTargetPath)\\TestArtifacts"
+    condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
   - task: PowerShell@1
     displayName: "Expand EndToEnd Test Data Package"
