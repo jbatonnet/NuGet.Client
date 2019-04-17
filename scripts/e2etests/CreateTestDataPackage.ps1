@@ -118,6 +118,8 @@ Function Create-TestDataPackage()
     $nuspecFile = Get-File($repositoryRootDirectoryPath, 'test', 'EndToEnd', 'NuGet.Client.EndToEnd.TestData.nuspec')
     $nugetFile = Get-NuGetFile
 
+    [System.IO.Directory]::CreateDirectory($outputDirectoryPath)
+
     $process = Start-Process `
         -FilePath $nugetFile.FullName `
         -WorkingDirectory $nuspecFile.DirectoryName `
