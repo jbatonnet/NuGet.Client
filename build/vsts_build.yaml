@@ -220,6 +220,17 @@ phases:
       failOnStandardError: "true"
     condition: " and(succeeded(), eq(variables['BuildRTM'], 'false')) "
 
+  - task: PowerShell@1
+    displayName: "Expand EndToEnd Test Data Package"
+    inputs:
+      scriptType: "inlineScript"
+      arguments: "-VstsPersonalAccessToken $(VstsPersonalAccessToken)"
+      inlineScript: |
+        Copy-Item $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)\\NuGet.Client.EndToEnd.TestData.1.0.0.nupkg $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)\\NuGet.Client.EndToEnd.TestData.1.0.0.zip
+        Expand-Archive -Path $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)\\NuGet.Client.EndToEnd.TestData.1.0.0.zip -DestinationPath $(Build.Repository.LocalPath)\\packages\\NuGet.Client.EndToEnd.TestData.1.0.0
+        Remove-Item -Path $(Build.Repository.LocalPath)\\artifacts\\$(NupkgOutputDir)\\NuGet.Client.EndToEnd.TestData.1.0.0.zip -Force -ErrorAction Ignore
+    condition: "and(always(),eq(variables['BuildRTM'], 'true'))"
+
   - task: MSBuild@1
     displayName: "Sign Nupkgs and VSIX"
     inputs:
