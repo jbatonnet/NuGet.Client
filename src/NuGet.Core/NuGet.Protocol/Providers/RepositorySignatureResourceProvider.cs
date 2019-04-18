@@ -26,7 +26,7 @@ namespace NuGet.Protocol
             var serviceIndex = await source.GetResourceAsync<ServiceIndexResourceV3>(token);
             if (serviceIndex != null)
             {
-                var serviceEntry = serviceIndex.GetServiceEntries(ServiceTypes.RepositorySignatures).FirstOrDefault();
+                var serviceEntry = serviceIndex.GetServiceEntry(ServiceTypes.RepositorySignatures);
 
                 if (serviceEntry != null)
                 {
@@ -101,8 +101,18 @@ namespace NuGet.Protocol
 
         private static string GenerateCacheKey(ServiceIndexEntry serviceEntry)
         {
-            var index = serviceEntry.Type.IndexOf('/');
-            var version = serviceEntry.Type.Substring(index + 1).Trim();
+            string version;
+
+            if (serviceEntry.Type.EndsWith(ServiceTypes.Versioned))
+            {
+                version = serviceEntry.ClientVersion.ToNormalizedString();
+            }
+            else
+            {
+                var index = serviceEntry.Type.IndexOf('/');
+
+                version = serviceEntry.Type.Substring(index + 1).Trim();
+            }
 
             return $"repository_signatures_{version}";
         }

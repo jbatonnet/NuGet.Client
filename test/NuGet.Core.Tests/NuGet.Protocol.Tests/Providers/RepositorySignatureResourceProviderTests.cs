@@ -21,6 +21,7 @@ namespace NuGet.Protocol.Providers.Tests
         private const string _resourceType470 = "RepositorySignatures/4.7.0";
         private const string _resourceType490 = "RepositorySignatures/4.9.0";
         private const string _resourceType500 = "RepositorySignatures/5.0.0";
+        private const string _resourceTypeVersioned = "RepositorySignatures/Versioned";
         private const string _resourceUri470 = "https://unit.test/4.7.0";
         private const string _resourceUri490 = "https://unit.test/4.9.0";
         private const string _resourceUri500 = "https://unit.test/5.0.0";
@@ -171,6 +172,99 @@ namespace NuGet.Protocol.Providers.Tests
             Assert.Equal(expectedCacheKey, actualCacheKey);
         }
 
+        [Fact]
+        public async Task TryCreate_WhenClientVersionedResourceIsPresentAndIncompatible_ReturnsDoesNotReturnClientVersionedResource()
+        {
+            var serviceEntry500 = new ServiceIndexEntry(new Uri(_resourceUri500), _resourceType500, _defaultVersion);
+            var serviceEntryVersioned = new ServiceIndexEntry(new Uri("https://unit.test/99.0.0"), _resourceTypeVersioned, new SemanticVersion(99, 0, 0));
+            var responses = new Dictionary<string, string>()
+            {
+                { serviceEntryVersioned.Uri.AbsoluteUri, GetRepositorySignaturesResourceJson(serviceEntryVersioned.Uri.AbsoluteUri) },
+                { serviceEntry500.Uri.AbsoluteUri, GetRepositorySignaturesResourceJson(serviceEntry500.Uri.AbsoluteUri) }
+            };
+            var httpSource = new TestHttpSource(_packageSource, responses);
+            var resourceProviders = new ResourceProvider[]
+            {
+                CreateServiceIndexResourceV3Provider(serviceEntryVersioned, serviceEntry500),
+                StaticHttpSource.CreateHttpSource(responses, httpSource: httpSource),
+                _repositorySignatureResourceProvider
+            };
+            var sourceRepository = new SourceRepository(_packageSource, resourceProviders);
+            string actualCacheKey = null;
+
+            httpSource.HttpSourceCachedRequestInspector = request =>
+            {
+                actualCacheKey = request.CacheKey;
+            };
+
+            var result = await _repositorySignatureResourceProvider.TryCreate(sourceRepository, CancellationToken.None);
+
+            Assert.True(result.Item1);
+            Assert.Equal("repository_signatures_5.0.0", actualCacheKey);
+        }
+
+        [Fact]
+        public async Task TryCreate_WhenClientVersionedResourceIsPresentAndCompatible_WithGreaterVersionedResource_ReturnsClientVersionedResource()
+        {
+            var serviceEntryVersioned = new ServiceIndexEntry(new Uri(_resourceUri470), _resourceTypeVersioned, new SemanticVersion(4, 7, 0));
+            var serviceEntry500 = new ServiceIndexEntry(new Uri(_resourceUri500), _resourceType500, _defaultVersion);
+            var responses = new Dictionary<string, string>()
+            {
+                { serviceEntryVersioned.Uri.AbsoluteUri, GetRepositorySignaturesResourceJson(serviceEntryVersioned.Uri.AbsoluteUri) },
+                { serviceEntry500.Uri.AbsoluteUri, GetRepositorySignaturesResourceJson(serviceEntry500.Uri.AbsoluteUri) }
+            };
+            var httpSource = new TestHttpSource(_packageSource, responses);
+            var resourceProviders = new ResourceProvider[]
+            {
+                CreateServiceIndexResourceV3Provider(serviceEntryVersioned, serviceEntry500),
+                StaticHttpSource.CreateHttpSource(responses, httpSource: httpSource),
+                _repositorySignatureResourceProvider
+            };
+            var sourceRepository = new SourceRepository(_packageSource, resourceProviders);
+            string actualCacheKey = null;
+
+            httpSource.HttpSourceCachedRequestInspector = request =>
+            {
+                actualCacheKey = request.CacheKey;
+            };
+
+            var result = await _repositorySignatureResourceProvider.TryCreate(sourceRepository, CancellationToken.None);
+
+            Assert.True(result.Item1);
+            Assert.Equal("repository_signatures_4.7.0", actualCacheKey);
+        }
+
+        [Fact]
+        public async Task TryCreate_WhenClientVersionedResourceIsPresentAndCompatible_WithLesserVersionedResource_ReturnsClientVersionedResource()
+        {
+            var serviceEntryVersioned = new ServiceIndexEntry(new Uri(_resourceUri500), _resourceTypeVersioned, new SemanticVersion(5, 0, 0));
+            var serviceEntry490 = new ServiceIndexEntry(new Uri(_resourceUri490), _resourceType490, _defaultVersion);
+            var responses = new Dictionary<string, string>()
+            {
+                { serviceEntryVersioned.Uri.AbsoluteUri, GetRepositorySignaturesResourceJson(serviceEntryVersioned.Uri.AbsoluteUri) },
+                { serviceEntry490.Uri.AbsoluteUri, GetRepositorySignaturesResourceJson(serviceEntry490.Uri.AbsoluteUri) }
+            };
+            var httpSource = new TestHttpSource(_packageSource, responses);
+            var resourceProviders = new ResourceProvider[]
+            {
+                CreateServiceIndexResourceV3Provider(serviceEntryVersioned, serviceEntry490),
+                StaticHttpSource.CreateHttpSource(responses, httpSource: httpSource),
+                _repositorySignatureResourceProvider
+            };
+            var sourceRepository = new SourceRepository(_packageSource, resourceProviders);
+            string actualCacheKey = null;
+
+            httpSource.HttpSourceCachedRequestInspector = request =>
+            {
+                actualCacheKey = request.CacheKey;
+            };
+
+            var result = await _repositorySignatureResourceProvider.TryCreate(sourceRepository, CancellationToken.None);
+
+            Assert.True(result.Item1);
+            Assert.Equal("repository_signatures_5.0.0", actualCacheKey);
+        }
+
         private static ServiceIndexResourceV3Provider CreateServiceIndexResourceV3Provider(params ServiceIndexEntry[] entries)
         {
             var provider = new Mock<ServiceIndexResourceV3Provider>();
@@ -184,10 +278,16 @@ namespace NuGet.Protocol.Providers.Tests
 
             foreach (var entry in entries)
             {
-                resources.Add(
-                    new JObject(
-                        new JProperty("@id", entry.Uri.AbsoluteUri),
-                        new JProperty("@type", entry.Type)));
+                var resource = new JObject(
+                    new JProperty("@id", entry.Uri.AbsoluteUri),
+                    new JProperty("@type", entry.Type));
+
+                if (entry.ClientVersion != _defaultVersion)
+                {
+                    resource.Add(new JProperty("clientVersion", entry.ClientVersion.ToNormalizedString()));
+                }
+
+                resources.Add(resource);
             }
 
             var index = new JObject();

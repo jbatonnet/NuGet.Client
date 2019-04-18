@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -19,8 +19,8 @@ namespace NuGet.Protocol
         private readonly string _json;
         private readonly IDictionary<string, List<ServiceIndexEntry>> _index;
         private readonly DateTime _requestTime;
-        private static readonly IReadOnlyList<ServiceIndexEntry> _emptyEntries = new List<ServiceIndexEntry>();
-        private static readonly IReadOnlyList<Uri> _emptyUris = new List<Uri>();
+        private static readonly IReadOnlyList<ServiceIndexEntry> _emptyEntries = Array.Empty<ServiceIndexEntry>();
+        private static readonly IReadOnlyList<Uri> _emptyUris = Array.Empty<Uri>();
         private static readonly SemanticVersion _defaultVersion = new SemanticVersion(0, 0, 0);
 
         public ServiceIndexResourceV3(JObject index, DateTime requestTime)
@@ -108,6 +108,16 @@ namespace NuGet.Protocol
                 // Find all entries with the same version.
                 return entries.Where(e => e.ClientVersion == bestMatch.ClientVersion).ToList();
             }
+        }
+
+        /// <summary>
+        /// Get the best match service entry.
+        /// </summary>
+        public virtual ServiceIndexEntry GetServiceEntry(params string[] orderedTypes)
+        {
+            var clientVersion = MinClientVersionUtility.GetNuGetClientVersion();
+
+            return GetServiceEntries(clientVersion, orderedTypes).FirstOrDefault();
         }
 
         /// <summary>
