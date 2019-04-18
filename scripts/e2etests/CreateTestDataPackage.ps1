@@ -24,6 +24,8 @@ param (
     [string] $outputDirectoryPath = $PWD
 )
 
+. "$PSScriptRoot\..\common.ps1"
+
 Function Get-DirectoryPath([string[]] $pathParts)
 {
     Return [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($pathParts))
@@ -62,31 +64,34 @@ Function Get-NuGetFile()
     Return Get-File($repositoryRootDirectoryPath, 'artifacts', 'VS15', 'nuget.exe')
 }
 
-Function Create-TestPackages()
+Function Create-TestPackages(
+    [Parameter(Mandatory = $True)]
+    [System.IO.DirectoryInfo] $sourceDirectory,
+    [System.IO.DirectoryInfo] $destinationDirectory)
 {
     $generateTestPackagesFile = Get-GenerateTestPackagesFile
-    $testPackagesDirectory = Get-Directory($repositoryRootDirectoryPath, 'test', 'EndToEnd', 'Packages')
+    $testDirectories = $sourceDirectory.GetDirectories()
 
-    $testDirectoryPaths = [System.IO.Directory]::GetDirectories($testPackagesDirectory.FullName)
-
-    $testDirectoryPaths | %{
-        $testDirectoryPath = $_
-        $packagesDirectory = Get-Directory($testDirectoryPath, 'Packages')
-        $assembliesDirectory = Get-Directory($testDirectoryPath, 'Assemblies')
+    $testDirectories | %{
+        $testDirectory = $_
+        $packagesDirectory = Get-Directory($testDirectory.FullName, 'Packages')
+        $assembliesDirectory = Get-Directory($testDirectory.FullName, 'Assemblies')
 
         Remove-Item -Path $packagesDirectory.FullName -Recurse -Force -ErrorAction Ignore
         Remove-Item -Path $assembliesDirectory.FullName -Recurse -Force -ErrorAction Ignore
 
-        Get-ChildItem $testDirectoryPath\* -Include *.dgml,*.nuspec | %{
-            Write-Host "Running $($generateTestPackagesFile.Name) on $($_.FullName)...  " -NoNewLine
+        Get-ChildItem "$($testDirectory.FullName)\*" -Include *.dgml,*.nuspec | %{
+            $file = $_
+
+            Write-Host "Running $($generateTestPackagesFile.Name) on $($file.FullName)...  " -NoNewLine
 
             $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
             $startInfo.FileName = $generateTestPackagesFile.FullName
-            $startInfo.WorkingDirectory = $testDirectoryPath
+            $startInfo.WorkingDirectory = $testDirectory.FullName
             $startInfo.UseShellExecute = $False
             $startInfo.RedirectStandardError = $True
             $startInfo.RedirectStandardOutput = $True
-            $startInfo.Arguments = $_.FullName
+            $startInfo.Arguments = $file.FullName
 
             $process = [System.Diagnostics.Process]::new()
             $process.StartInfo = $startInfo
@@ -99,6 +104,17 @@ Function Create-TestPackages()
             If ($process.ExitCode -eq 0)
             {
                 Write-Host 'Success.'
+
+                If ($destinationDirectory)
+                {
+                    $packagesDirectory.GetFiles('*.nupkg') | %{
+                        $packageFile = $_
+
+                        Move-Item -Path $packageFile.FullName -Destination $destinationDirectory.FullName -Force
+                    }
+
+                    Remove-Item -Path $packagesDirectory.FullName -Recurse -Force -ErrorAction Ignore
+                }
             }
             else
             {
@@ -114,10 +130,13 @@ Function Create-TestPackages()
 
 Function Create-TestDataPackage()
 {
-    $nuspecFile = Get-File($repositoryRootDirectoryPath, 'test', 'EndToEnd', 'NuGet.Client.EndToEnd.TestData.nuspec')
+    $packageId = 'NuGet.Client.EndToEnd.TestData'
+    $nuspecFile = Get-File($repositoryRootDirectoryPath, 'test', 'EndToEnd', "$packageId.nuspec")
     $nugetFile = Get-NuGetFile
 
-    [System.IO.Directory]::CreateDirectory($outputDirectoryPath)
+    $outputDirectory = [System.IO.DirectoryInfo]::new([System.IO.Path]::GetFullPath($outputDirectoryPath))
+
+    $outputDirectory.Create()
 
     $process = Start-Process `
         -FilePath $nugetFile.FullName `
@@ -125,11 +144,14 @@ Function Create-TestDataPackage()
         -WindowStyle Hidden `
         -PassThru `
         -Wait `
-        -ArgumentList 'pack', $nuspecFile.FullName, "-OutputDirectory `"$outputDirectoryPath`"", '-NoDefaultExcludes', '-NonInteractive'
+        -ArgumentList 'pack', $nuspecFile.FullName, "-OutputDirectory `"$($outputDirectory.FullName)`"", '-NoDefaultExcludes', '-NonInteractive'
 
     If ($process.ExitCode -eq 0)
     {
-        Write-Host "Created test data package in $outputDirectoryPath."
+        $packageFiles = $outputDirectory.GetFiles("$packageId`.*.nupkg", [System.IO.SearchOption]::TopDirectoryOnly)
+        $packageFile = $packageFiles[0]
+
+        Write-Host "Created test data package at $($packageFile.FullName)."
     }
     else
     {
@@ -137,5 +159,25 @@ Function Create-TestDataPackage()
     }
 }
 
-Create-TestPackages
-Create-TestDataPackage
+$workingDirectoryPath = New-TempDir
+$workingDirectory = [System.IO.DirectoryInfo]::new($workingDirectoryPath)
+
+Try
+{
+    $sourceDirectory = Get-Directory($repositoryRootDirectoryPath, 'test', 'EndToEnd', 'Packages')
+
+    $packagesDirectory = Join-Path $WorkingDirectory 'Packages'
+    Write-Verbose "Copying all test data from '$TestSource' to '$packagesDirectory'"
+    & robocopy $sourceDirectory.FullName $workingDirectory.FullName /MIR
+
+    Create-TestPackages -sourceDirectory $workingDirectory
+
+    $sharedDirectory = Get-Directory($workingDirectory, '_Shared')
+    Create-TestPackages -sourceDirectory $sharedDirectory -destinationDirectory $workingDirectory
+
+    Create-TestDataPackage
+}
+Finally
+{
+    Remove-Item -Path $workingDirectory.FullName -Recurse -Force -ErrorAction Ignore
+}
