@@ -170,6 +170,13 @@ Try
     Write-Verbose "Copying all test data from '$TestSource' to '$packagesDirectory'"
     & robocopy $sourceDirectory.FullName $workingDirectory.FullName /MIR
 
+    # RoboCopy returns a variety of error codes.  This is the only one we care about and it means "copy completed successfully";
+    # however, to PowerShell a non-zero exit code is a failure.
+    If ($LASTEXITCODE -eq 1)
+    {
+        $LASTEXITCODE = 0
+    }
+
     Create-TestPackages -sourceDirectory $workingDirectory
 
     $sharedDirectory = Get-Directory($workingDirectory, '_Shared')
