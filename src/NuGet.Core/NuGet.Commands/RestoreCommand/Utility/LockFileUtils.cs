@@ -591,7 +591,7 @@ namespace NuGet.Commands
                 KnownLibraryProperties.FrameworkReferences,
                 out frameworkReferencesObject))
             {
-                projectLib.FrameworkReferences.AddRange((IEnumerable<string>)frameworkReferencesObject);
+                projectLib.FrameworkReferences.AddRange(((ISet<FrameworkDependency>)frameworkReferencesObject).Select(f => f.Name)); // TODO NK - Should it be a lock file item
             }
 
             // Exclude items

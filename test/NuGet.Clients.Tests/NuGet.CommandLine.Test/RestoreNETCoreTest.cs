@@ -7365,7 +7365,9 @@ namespace NuGet.CommandLine.Test
                 Assert.Equal(0, lockFile.Libraries.Count);
                 Assert.Equal(1, lockFile.PackageSpec.TargetFrameworks.Count);
                 Assert.Equal(0, lockFile.Targets.First().Libraries.Count);
-                Assert.Equal("FrameworkRefY", lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single());
+                Assert.Equal("FrameworkRefY", lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().Name);
+                Assert.Equal("none", lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().PrivateAssets.ToString());
+
             }
         }
 

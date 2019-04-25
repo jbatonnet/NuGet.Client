@@ -132,7 +132,7 @@ namespace NuGet.SolutionRestoreManager
                     tfi.FrameworkReferences.AddRange(
                         targetFrameworkInfo2.FrameworkReferences
                             .Cast<IVsReferenceItem>()
-                            .Select(e => e.Name));
+                            .Select(ToFrameworkDependency));
                 }
             }
 
@@ -361,6 +361,12 @@ namespace NuGet.SolutionRestoreManager
             return downloadDependency;
         }
 
+        private static FrameworkDependency ToFrameworkDependency(IVsReferenceItem item)
+        {
+            var privateAssets = GetFrameworkDependencyFlags(item, ProjectBuildProperties.PrivateAssets);
+            return new FrameworkDependency(item.Name, privateAssets);
+        }
+
         private static ProjectRestoreReference ToProjectRestoreReference(IVsReferenceItem item, string projectDirectory)
         {
             // The path may be a relative path, to match the project unique name as a
@@ -393,6 +399,19 @@ namespace NuGet.SolutionRestoreManager
             }
 
             return VersionRange.All;
+        }
+
+        /// <summary>
+        /// Get the frameworkdependencyflag based on the name.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        private static FrameworkDependencyFlags GetFrameworkDependencyFlags(IVsReferenceItem item, string name)
+        {
+            var flags = GetPropertyValueOrNull(item, name);
+            
+            return FrameworkDependencyFlagsUtils.GetFlags(flags);
         }
 
         /// <summary>

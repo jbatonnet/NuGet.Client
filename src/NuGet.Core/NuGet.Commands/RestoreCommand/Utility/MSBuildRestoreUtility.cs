@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -25,8 +24,8 @@ namespace NuGet.Commands
     {
         // Clear keyword for properties.
         public static readonly string Clear = nameof(Clear);
-        private static readonly string[] HttpPrefixes = new string[] { "http:", "https:" };
-        private const string DoubleSlash = "//";
+        private static readonly string[] _httpPrefixes = new string[] { "http:", "https:" };
+        private const string _doubleSlash = "//";
 
         /// <summary>
         /// Convert MSBuild items to a DependencyGraphSpec.
@@ -678,20 +677,26 @@ namespace NuGet.Commands
                 var frameworkReference = item.GetProperty("Id");
                 var frameworks = GetFrameworks(item);
 
+                var privateAssets = item.GetProperty("PrivateAssets");
+
                 foreach (var framework in frameworks)
                 {
-                    AddDependencyIfNotExist(spec, framework, frameworkReference);
+                    AddFrameworkReferenceIfNotExists(spec, framework, frameworkReference, privateAssets);
                 }
             }
         }
 
-        private static bool AddDependencyIfNotExist(PackageSpec spec, NuGetFramework framework, string frameworkReference)
+        private static bool AddFrameworkReferenceIfNotExists(PackageSpec spec, NuGetFramework framework, string frameworkReference, string privateAssetsValue)
         {
             var frameworkInfo = spec.GetTargetFramework(framework);
 
-            if (!frameworkInfo.FrameworkReferences.Contains(frameworkReference))
+            if (!frameworkInfo
+                .FrameworkReferences
+                .Select(f => f.Name)
+                .Contains(frameworkReference, ComparisonUtility.FrameworkReferenceNameComparer))
             {
-                frameworkInfo.FrameworkReferences.Add(frameworkReference);
+                var privateAssets = FrameworkDependencyFlagsUtils.GetFlags(MSBuildStringUtility.Split(privateAssetsValue));
+                frameworkInfo.FrameworkReferences.Add(new FrameworkDependency(name: frameworkReference, privateAssets: privateAssets));
                 return true;
             }
             return false;
@@ -848,15 +853,15 @@ namespace NuGet.Commands
         {
             var result = s;
 
-            if (result.IndexOf('/') >= -1 && result.IndexOf(DoubleSlash) == -1)
+            if (result.IndexOf('/') >= -1 && result.IndexOf(_doubleSlash) == -1)
             {
-                for (var i = 0; i < HttpPrefixes.Length; i++)
+                for (var i = 0; i < _httpPrefixes.Length; i++)
                 {
-                    result = FixSourcePath(result, HttpPrefixes[i], DoubleSlash);
+                    result = FixSourcePath(result, _httpPrefixes[i], _doubleSlash);
                 }
 
                 // For non-windows machines use file:///
-                var fileSlashes = RuntimeEnvironmentHelper.IsWindows ? DoubleSlash : "///";
+                var fileSlashes = RuntimeEnvironmentHelper.IsWindows ? _doubleSlash : "///";
                 result = FixSourcePath(result, "file:", fileSlashes);
             }
 
@@ -867,7 +872,7 @@ namespace NuGet.Commands
         {
             if (s.Length >= (prefixWithoutSlashes.Length + 2)
                 && s.StartsWith($"{prefixWithoutSlashes}/", StringComparison.OrdinalIgnoreCase)
-                && !s.StartsWith($"{prefixWithoutSlashes}{DoubleSlash}", StringComparison.OrdinalIgnoreCase))
+                && !s.StartsWith($"{prefixWithoutSlashes}{_doubleSlash}", StringComparison.OrdinalIgnoreCase))
             {
                 // original prefix casing + // + rest of the path
                 return s.Substring(0, prefixWithoutSlashes.Length) + slashes + s.Substring(prefixWithoutSlashes.Length + 1);
@@ -881,6 +886,7 @@ namespace NuGet.Commands
             return StringComparer.OrdinalIgnoreCase.Equals(item.GetProperty(propertyName), bool.TrueString);
         }
 
+        // TODO NK.
         private static readonly Lazy<bool> _isPersistDGSet = new Lazy<bool>(() => IsPersistDGSet());
 
         /// <summary>

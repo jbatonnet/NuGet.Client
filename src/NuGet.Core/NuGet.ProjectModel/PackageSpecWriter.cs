@@ -508,7 +508,7 @@ namespace NuGet.ProjectModel
         {
             if (frameworkReferences?.Any() == true)
             {
-                writer.WriteObjectStart("downloadDependencies");
+                writer.WriteObjectStart("frameworkReferences");
 
                 foreach (var dependency in frameworkReferences.OrderBy(dep => dep))
                 {

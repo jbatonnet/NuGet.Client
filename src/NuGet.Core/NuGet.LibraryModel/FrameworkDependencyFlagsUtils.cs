@@ -58,6 +58,7 @@ namespace NuGet.LibraryModel
 
         /// <summary>
         /// Convert set of flag strings into a LibraryIncludeFlags.
+        /// If the <paramref name="flags"/> is null, it returns the default value of <see cref="FrameworkDependencyFlags.None"/>
         /// </summary>
         public static FrameworkDependencyFlags GetFlags(string flags)
         {
