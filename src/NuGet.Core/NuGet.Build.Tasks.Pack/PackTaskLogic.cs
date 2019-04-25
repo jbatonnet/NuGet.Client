@@ -362,7 +362,7 @@ namespace NuGet.Build.Tasks.Pack
                     }
                     else
                     {
-                        tfmSpecificRefs.Add(frameworkShortFolderName, new HashSet<string>(FrameworkReference.FrameworkReferenceNameComparer) { frameworkRef.Name });
+                        tfmSpecificRefs.Add(frameworkShortFolderName, new HashSet<string>(ComparisonUtility.FrameworkReferenceNameComparer) { frameworkRef.Name });
                     }
                 }
             }

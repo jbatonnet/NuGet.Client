@@ -7,8 +7,10 @@ using System.Linq;
 
 namespace NuGet.LibraryModel
 {
-    class FrameworkDependencyFlagsUtils
+    public class FrameworkDependencyFlagsUtils
     {
+        public static FrameworkDependencyFlags Default = FrameworkDependencyFlags.None;
+
         /// <summary>
         /// Convert set of flag strings into a FrameworkDependencyFlags.
         /// </summary>

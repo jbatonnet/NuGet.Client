@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using NuGet.Common;
 
 namespace NuGet.LibraryModel
 {
@@ -23,7 +24,19 @@ namespace NuGet.LibraryModel
 
         public int CompareTo(FrameworkDependency other)
         {
-            throw new NotImplementedException();
+            if (ReferenceEquals(other, null))
+            {
+                return 1;
+            }
+            
+            var compare = ComparisonUtility.FrameworkReferenceNameComparer.Compare(Name, other.Name);
+
+            if (compare == 0)
+            {
+                return PrivateAssets.CompareTo(other.PrivateAssets);
+            }
+
+            return compare;
         }
 
         public bool Equals(FrameworkDependency other)
@@ -38,7 +51,7 @@ namespace NuGet.LibraryModel
                 return true;
             }
 
-            return StringComparer.OrdinalIgnoreCase.Equals(Name, other.Name) &&
+            return ComparisonUtility.FrameworkReferenceNameComparer.Equals(Name, other.Name) &&
                    PrivateAssets.Equals(other.PrivateAssets);
         }
     }

@@ -4,13 +4,12 @@
 using System;
 using System.Collections.Generic;
 using NuGet.Shared;
+using static NuGet.Common.ComparisonUtility;
 
 namespace NuGet.Packaging
 {
     public class FrameworkReference : IEquatable<FrameworkReference>, IComparer<FrameworkReference>, IComparable<FrameworkReference>
     {
-        public static StringComparer FrameworkReferenceNameComparer = StringComparer.OrdinalIgnoreCase;
-
         public string Name { get; }
 
         public FrameworkReference(string name)
