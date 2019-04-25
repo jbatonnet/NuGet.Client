@@ -1635,7 +1635,7 @@ namespace NuGet.Commands.Test
                     Assert.Equal("x", lockFile.Targets.First().Libraries.First().Name);
                     Assert.Equal(0, lockFile.LogMessages.Count);
                     Assert.Equal("a", lockFile.PackageSpec.TargetFrameworks.First().FrameworkReferences.Single().Name);
-                    Assert.Equal("none", lockFile.PackageSpec.TargetFrameworks.First().FrameworkReferences.Single().PrivateAssets.ToString());
+                    Assert.Equal("none", FrameworkDependencyFlagsUtils.GetFlagString(lockFile.PackageSpec.TargetFrameworks.First().FrameworkReferences.Single().PrivateAssets));
                     Assert.True(File.Exists(targetsPath));
                     Assert.True(File.Exists(propsPath));
                 }

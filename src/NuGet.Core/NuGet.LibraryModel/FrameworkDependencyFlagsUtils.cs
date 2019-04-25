@@ -16,23 +16,21 @@ namespace NuGet.LibraryModel
         /// </summary>
         public static FrameworkDependencyFlags GetFlags(IEnumerable<string> flags)
         {
-            if (flags == null)
-            {
-                throw new ArgumentNullException(nameof(flags));
-            }
-
             var result = FrameworkDependencyFlags.None;
 
-            foreach (var flag in flags)
+            if (flags != null)
             {
-                switch (flag.ToLowerInvariant())
+                foreach (var flag in flags)
                 {
-                    case "all":
-                        result |= FrameworkDependencyFlags.All;
-                        break;
-                    default:
-                        break;
-                        // None is a noop here
+                    switch (flag.ToLowerInvariant())
+                    {
+                        case "all":
+                            result |= FrameworkDependencyFlags.All;
+                            break;
+                        default:
+                            break;
+                            // None is a noop here
+                    }
                 }
             }
 
@@ -44,7 +42,6 @@ namespace NuGet.LibraryModel
         /// </summary>
         public static string GetFlagString(FrameworkDependencyFlags flags)
         {
-
             switch (flags)
             {
                 case FrameworkDependencyFlags.All:

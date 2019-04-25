@@ -12,6 +12,7 @@ using FluentAssertions;
 using Newtonsoft.Json.Linq;
 using NuGet.Common;
 using NuGet.Frameworks;
+using NuGet.LibraryModel;
 using NuGet.Packaging;
 using NuGet.Packaging.Core;
 using NuGet.ProjectModel;
@@ -7366,7 +7367,7 @@ namespace NuGet.CommandLine.Test
                 Assert.Equal(1, lockFile.PackageSpec.TargetFrameworks.Count);
                 Assert.Equal(0, lockFile.Targets.First().Libraries.Count);
                 Assert.Equal("FrameworkRefY", lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().Name);
-                Assert.Equal("none", lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().PrivateAssets.ToString());
+                Assert.Equal("none", FrameworkDependencyFlagsUtils.GetFlagString(lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().PrivateAssets));
 
             }
         }

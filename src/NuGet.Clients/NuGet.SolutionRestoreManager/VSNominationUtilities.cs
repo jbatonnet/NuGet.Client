@@ -129,10 +129,7 @@ namespace NuGet.SolutionRestoreManager
 
                 if (targetFrameworkInfo2.FrameworkReferences != null)
                 {
-                    tfi.FrameworkReferences.AddRange(
-                        targetFrameworkInfo2.FrameworkReferences
-                            .Cast<IVsReferenceItem>()
-                            .Select(ToFrameworkDependency));
+                    PopulateFrameworkDependencies(tfi, targetFrameworkInfo2);
                 }
             }
 
@@ -359,6 +356,17 @@ namespace NuGet.SolutionRestoreManager
             var downloadDependency = new DownloadDependency(id, versionRange);
 
             return downloadDependency;
+        }
+
+        private static void PopulateFrameworkDependencies(TargetFrameworkInformation tfi, IVsTargetFrameworkInfo2 targetFrameworkInfo2)
+        {
+            foreach ( var item in targetFrameworkInfo2.FrameworkReferences.Cast<IVsReferenceItem>())
+            {
+                if (!tfi.FrameworkReferences.Any(e => ComparisonUtility.FrameworkReferenceNameComparer.Equals(e.Name, item.Name)))
+                {
+                    tfi.FrameworkReferences.Add(ToFrameworkDependency(item));
+                }
+            }
         }
 
         private static FrameworkDependency ToFrameworkDependency(IVsReferenceItem item)
