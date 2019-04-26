@@ -1769,9 +1769,11 @@ namespace NuGet.Commands.Test
                     ""dependencies"": {
                         ""x"": ""1.0.0""
                     },
-                    ""frameworkReferences"": [
-                        ""Microsoft.WindowsDesktop.App|WPF""
-                    ]
+                    ""frameworkReferences"": {
+                        ""Microsoft.WindowsDesktop.App|WPF"" : {
+                            ""privateAssets"" : ""none""
+                        }
+                    }
                 }
               }
             }";

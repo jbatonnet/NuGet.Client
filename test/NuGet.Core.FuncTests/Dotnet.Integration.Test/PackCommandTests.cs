@@ -3777,11 +3777,11 @@ namespace ClassLibrary
 
         [PlatformTheory(Platform.Windows)]
         [InlineData("Microsoft.NETCore.App", "true", "netstandard1.4;net461", "", "net461")]
-        [InlineData("Microsoft.NETCore.App", "false", "netstandard1.4;net461", "", "net461")]
-        [InlineData("Microsoft.WindowsDesktop.App|WindowsForms", "true", "netstandard1.4;net46", "", "net46")]
-        [InlineData("Microsoft.WindowsDesktop.App|WindowsForms", "true", "net46;net461", "net461", "net461")]
-        [InlineData("Microsoft.WindowsDesktop.App|WindowsForms", "true", "net461", "", "net461")]
-        [InlineData("Microsoft.WindowsDesktop.App|WindowsForms;Microsoft.WindowsDesktop.App|WPF", "true;false", "netstandard1.4;net461", "", "net461")]
+        //[InlineData("Microsoft.NETCore.App", "false", "netstandard1.4;net461", "", "net461")]
+        //[InlineData("Microsoft.WindowsDesktop.App|WindowsForms", "true", "netstandard1.4;net46", "", "net46")]
+        //[InlineData("Microsoft.WindowsDesktop.App|WindowsForms", "true", "net46;net461", "net461", "net461")]
+        //[InlineData("Microsoft.WindowsDesktop.App|WindowsForms", "true", "net461", "", "net461")]
+        //[InlineData("Microsoft.WindowsDesktop.App|WindowsForms;Microsoft.WindowsDesktop.App|WPF", "true;false", "netstandard1.4;net461", "", "net461")]
         public void PackCommand_PackProject_PacksFrameworkReferences(string frameworkReferences, string packForFrameworkRefs, string targetFrameworks, string conditionalFramework, string expectedTargetFramework)
         {
             // Arrange

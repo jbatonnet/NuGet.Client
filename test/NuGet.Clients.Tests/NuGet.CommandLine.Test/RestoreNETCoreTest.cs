@@ -7368,7 +7368,6 @@ namespace NuGet.CommandLine.Test
                 Assert.Equal(0, lockFile.Targets.First().Libraries.Count);
                 Assert.Equal("FrameworkRefY", lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().Name);
                 Assert.Equal("none", FrameworkDependencyFlagsUtils.GetFlagString(lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().PrivateAssets));
-
             }
         }
 
@@ -7408,28 +7407,14 @@ namespace NuGet.CommandLine.Test
                     solutionRoot: pathContext.SolutionRoot,
                     frameworks: MSBuildStringUtility.Split(projectFrameworks));
 
-                projectA.AddProjectToAllFrameworks(projectB);
+                projectB.AddProjectToAllFrameworks(projectA);
 
                 solution.Projects.Add(projectA);
                 solution.Projects.Add(projectB);
 
                 solution.Create(pathContext.SolutionRoot);
-                var xmlA = projectA.GetXML();
-                var propsA = new Dictionary<string, string>();
-                var attributesA = new Dictionary<string, string>();
-                attributesA.Add("PrivateAssets", "all");
-                ProjectFileUtils.AddItem(
-                                    xmlA,
-                                    "FrameworkReference",
-                                    "FrameworkRefSupressed",
-                                    NuGetFramework.AnyFramework,
-                                    propsA,
-                                    attributesA);
-                xmlA.Save(projectA.ProjectPath);
 
-
-                var xml = projectB.GetXML();
-
+                var xml = projectA.GetXML();
                 var props = new Dictionary<string, string>();
                 var attributes = new Dictionary<string, string>();
                 ProjectFileUtils.AddItem(
@@ -7439,8 +7424,16 @@ namespace NuGet.CommandLine.Test
                                     NuGetFramework.AnyFramework,
                                     props,
                                     attributes);
+                attributes.Add("PrivateAssets", "all");
+                ProjectFileUtils.AddItem(
+                                    xml,
+                                    "FrameworkReference",
+                                    "FrameworkRefSupressed",
+                                    NuGetFramework.AnyFramework,
+                                    props,
+                                    attributes);
 
-                xml.Save(projectB.ProjectPath);
+                xml.Save(projectA.ProjectPath);
 
                 // Act
                 var r = Util.RestoreSolution(pathContext);
@@ -7450,22 +7443,23 @@ namespace NuGet.CommandLine.Test
                 Assert.True(File.Exists(projectA.AssetsFileOutputPath), r.AllOutput);
 
                 var lockFile = LockFileUtilities.GetLockFile(projectA.AssetsFileOutputPath, Common.NullLogger.Instance);
-                Assert.Equal(2, lockFile.Libraries.Count);
+                Assert.Equal(1, lockFile.Libraries.Count);
                 Assert.Equal(1, lockFile.PackageSpec.TargetFrameworks.Count);
-                Assert.Equal(2, lockFile.Targets.First().Libraries.Count);
-                Assert.Equal("FrameworkRef,FrameworkRefSupressed", string.Join(",", lockFile.Targets.First().Libraries.First().FrameworkReferences));
+                Assert.Equal(1, lockFile.Targets.First().Libraries.Count);
+                Assert.Equal("FrameworkRef", string.Join(",", lockFile.Targets.First().Libraries.First().FrameworkReferences));
                 Assert.True(Directory.Exists(Path.Combine(pathContext.UserPackagesFolder, packageX.Identity.Id, packageX.Version)), $"{packageX.ToString()} is not installed");
+                Assert.Equal("all", FrameworkDependencyFlagsUtils.GetFlagString(lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.First().PrivateAssets));
+                Assert.Equal("none", FrameworkDependencyFlagsUtils.GetFlagString(lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Last().PrivateAssets));
 
                 // Assert 2
                 Assert.True(File.Exists(projectB.AssetsFileOutputPath), r.AllOutput);
 
                 lockFile = LockFileUtilities.GetLockFile(projectB.AssetsFileOutputPath, Common.NullLogger.Instance);
-                Assert.Equal(0, lockFile.Libraries.Count);
+                Assert.Equal(2, lockFile.Libraries.Count);
                 Assert.Equal(1, lockFile.PackageSpec.TargetFrameworks.Count);
-                Assert.Equal(0, lockFile.Targets.First().Libraries.Count);
-                Assert.Equal("FrameworkRef,FrameworkRefY", string.Join(",", lockFile.Targets.First().Libraries.First().FrameworkReferences));
-
-                Assert.Equal("none", FrameworkDependencyFlagsUtils.GetFlagString(lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().PrivateAssets));
+                Assert.Equal(2, lockFile.Targets.First().Libraries.Count);
+                Assert.Equal("FrameworkRef", string.Join(",", lockFile.Targets.First().Libraries.First().FrameworkReferences));
+                Assert.Equal("FrameworkRefY", string.Join(",", lockFile.Targets.First().Libraries.Last().FrameworkReferences));
 
             }
         }
