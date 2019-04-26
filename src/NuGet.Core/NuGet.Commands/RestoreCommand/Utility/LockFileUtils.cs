@@ -594,7 +594,7 @@ namespace NuGet.Commands
                 projectLib.FrameworkReferences.AddRange(
                     ((ISet<FrameworkDependency>)frameworkReferencesObject)
                         .Where(e => e.PrivateAssets != FrameworkDependencyFlags.All)
-                        .Select(f => f.Name)); // TODO NK - Should it be a lock file item
+                        .Select(f => f.Name));
             }
 
             // Exclude items
