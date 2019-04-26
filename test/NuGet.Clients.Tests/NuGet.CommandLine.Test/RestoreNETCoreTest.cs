@@ -7373,6 +7373,104 @@ namespace NuGet.CommandLine.Test
         }
 
         [Fact]
+        public async Task RestoreNetCore_SingleTFM_FrameworkReference_TransitiveProjectToProject_PrivateAssets_SuppressesReference()
+        {
+            // Arrange
+            using (var pathContext = new SimpleTestPathContext())
+            {
+                // Set up solution, project, and packages
+                var solution = new SimpleTestSolutionContext(pathContext.SolutionRoot);
+                var projectFrameworks = "net46";
+
+                var projectA = SimpleTestProjectContext.CreateNETCoreWithSDK(
+                            projectName: "a",
+                            solutionRoot: pathContext.SolutionRoot,
+                            frameworks: MSBuildStringUtility.Split(projectFrameworks));
+
+                var packageX = new SimpleTestPackageContext()
+                {
+                    Id = "x",
+                    Version = "1.0.0"
+                };
+                packageX.FrameworkReferences.Add(NuGetFramework.Parse("net45"), new string[] { "FrameworkRef" });
+                packageX.Files.Clear();
+                packageX.AddFile("lib/net45/x.dll");
+
+                await SimpleTestPackageUtility.CreateFolderFeedV3Async(
+                    pathContext.PackageSource,
+                    packageX);
+
+                projectA.AddPackageToAllFrameworks(packageX);
+
+
+                var projectB = SimpleTestProjectContext.CreateNETCoreWithSDK(
+                    projectName: "b",
+                    solutionRoot: pathContext.SolutionRoot,
+                    frameworks: MSBuildStringUtility.Split(projectFrameworks));
+
+                projectA.AddProjectToAllFrameworks(projectB);
+
+                solution.Projects.Add(projectA);
+                solution.Projects.Add(projectB);
+
+                solution.Create(pathContext.SolutionRoot);
+                var xmlA = projectA.GetXML();
+                var propsA = new Dictionary<string, string>();
+                var attributesA = new Dictionary<string, string>();
+                attributesA.Add("PrivateAssets", "all");
+                ProjectFileUtils.AddItem(
+                                    xmlA,
+                                    "FrameworkReference",
+                                    "FrameworkRefSupressed",
+                                    NuGetFramework.AnyFramework,
+                                    propsA,
+                                    attributesA);
+                xmlA.Save(projectA.ProjectPath);
+
+
+                var xml = projectB.GetXML();
+
+                var props = new Dictionary<string, string>();
+                var attributes = new Dictionary<string, string>();
+                ProjectFileUtils.AddItem(
+                                    xml,
+                                    "FrameworkReference",
+                                    "FrameworkRefY",
+                                    NuGetFramework.AnyFramework,
+                                    props,
+                                    attributes);
+
+                xml.Save(projectB.ProjectPath);
+
+                // Act
+                var r = Util.RestoreSolution(pathContext);
+
+                // Assert
+                Assert.True(r.Success, r.AllOutput);
+                Assert.True(File.Exists(projectA.AssetsFileOutputPath), r.AllOutput);
+
+                var lockFile = LockFileUtilities.GetLockFile(projectA.AssetsFileOutputPath, Common.NullLogger.Instance);
+                Assert.Equal(2, lockFile.Libraries.Count);
+                Assert.Equal(1, lockFile.PackageSpec.TargetFrameworks.Count);
+                Assert.Equal(2, lockFile.Targets.First().Libraries.Count);
+                Assert.Equal("FrameworkRef,FrameworkRefSupressed", string.Join(",", lockFile.Targets.First().Libraries.First().FrameworkReferences));
+                Assert.True(Directory.Exists(Path.Combine(pathContext.UserPackagesFolder, packageX.Identity.Id, packageX.Version)), $"{packageX.ToString()} is not installed");
+
+                // Assert 2
+                Assert.True(File.Exists(projectB.AssetsFileOutputPath), r.AllOutput);
+
+                lockFile = LockFileUtilities.GetLockFile(projectB.AssetsFileOutputPath, Common.NullLogger.Instance);
+                Assert.Equal(0, lockFile.Libraries.Count);
+                Assert.Equal(1, lockFile.PackageSpec.TargetFrameworks.Count);
+                Assert.Equal(0, lockFile.Targets.First().Libraries.Count);
+                Assert.Equal("FrameworkRef,FrameworkRefY", string.Join(",", lockFile.Targets.First().Libraries.First().FrameworkReferences));
+
+                Assert.Equal("none", FrameworkDependencyFlagsUtils.GetFlagString(lockFile.PackageSpec.TargetFrameworks.Single().FrameworkReferences.Single().PrivateAssets));
+
+            }
+        }
+
+        [Fact]
         public async Task RestoreNetCore_MovedProject_DoesNotOverwriteMSBuildPropsTargets()
         {
             // Arrange

@@ -591,7 +591,10 @@ namespace NuGet.Commands
                 KnownLibraryProperties.FrameworkReferences,
                 out frameworkReferencesObject))
             {
-                projectLib.FrameworkReferences.AddRange(((ISet<FrameworkDependency>)frameworkReferencesObject).Select(f => f.Name)); // TODO NK - Should it be a lock file item
+                projectLib.FrameworkReferences.AddRange(
+                    ((ISet<FrameworkDependency>)frameworkReferencesObject)
+                        .Where(e => e.PrivateAssets != FrameworkDependencyFlags.All)
+                        .Select(f => f.Name)); // TODO NK - Should it be a lock file item
             }
 
             // Exclude items
