@@ -24,8 +24,8 @@ namespace NuGet.Commands
     {
         // Clear keyword for properties.
         public static readonly string Clear = nameof(Clear);
-        private static readonly string[] _httpPrefixes = new string[] { "http:", "https:" };
-        private const string _doubleSlash = "//";
+        private static readonly string[] HttpPrefixes = new string[] { "http:", "https:" };
+        private const string DoubleSlash = "//";
 
         /// <summary>
         /// Convert MSBuild items to a DependencyGraphSpec.
@@ -853,15 +853,15 @@ namespace NuGet.Commands
         {
             var result = s;
 
-            if (result.IndexOf('/') >= -1 && result.IndexOf(_doubleSlash) == -1)
+            if (result.IndexOf('/') >= -1 && result.IndexOf(DoubleSlash) == -1)
             {
-                for (var i = 0; i < _httpPrefixes.Length; i++)
+                for (var i = 0; i < HttpPrefixes.Length; i++)
                 {
-                    result = FixSourcePath(result, _httpPrefixes[i], _doubleSlash);
+                    result = FixSourcePath(result, HttpPrefixes[i], DoubleSlash);
                 }
 
                 // For non-windows machines use file:///
-                var fileSlashes = RuntimeEnvironmentHelper.IsWindows ? _doubleSlash : "///";
+                var fileSlashes = RuntimeEnvironmentHelper.IsWindows ? DoubleSlash : "///";
                 result = FixSourcePath(result, "file:", fileSlashes);
             }
 
@@ -872,7 +872,7 @@ namespace NuGet.Commands
         {
             if (s.Length >= (prefixWithoutSlashes.Length + 2)
                 && s.StartsWith($"{prefixWithoutSlashes}/", StringComparison.OrdinalIgnoreCase)
-                && !s.StartsWith($"{prefixWithoutSlashes}{_doubleSlash}", StringComparison.OrdinalIgnoreCase))
+                && !s.StartsWith($"{prefixWithoutSlashes}{DoubleSlash}", StringComparison.OrdinalIgnoreCase))
             {
                 // original prefix casing + // + rest of the path
                 return s.Substring(0, prefixWithoutSlashes.Length) + slashes + s.Substring(prefixWithoutSlashes.Length + 1);
@@ -884,26 +884,6 @@ namespace NuGet.Commands
         private static bool IsPropertyTrue(IMSBuildItem item, string propertyName)
         {
             return StringComparer.OrdinalIgnoreCase.Equals(item.GetProperty(propertyName), bool.TrueString);
-        }
-
-        // TODO NK.
-        private static readonly Lazy<bool> _isPersistDGSet = new Lazy<bool>(() => IsPersistDGSet());
-
-        /// <summary>
-        /// True if NUGET_PERSIST_DG is set to true.
-        /// </summary>
-        private static bool IsPersistDGSet()
-        {
-            var settingValue = Environment.GetEnvironmentVariable("NUGET_PERSIST_DG");
-
-            bool val;
-            if (!string.IsNullOrEmpty(settingValue)
-                && bool.TryParse(settingValue, out val))
-            {
-                return val;
-            }
-
-            return false;
         }
 
         /// <summary>
